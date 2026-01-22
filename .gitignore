@@ -1,0 +1,17 @@
+# Entorno virtual
+.venv/
+venv/
+
+# Cache de Python
+__pycache__/
+*.pyc
+
+# Datasets y carpetas temporales
+dataset_zips_originales/
+tmp/
+procesado/
+
+# Permitir solo los zips procesados
+!dataset_zips_procesados/
+dataset_zips_procesados/*
+!dataset_zips_procesados/*.zip
