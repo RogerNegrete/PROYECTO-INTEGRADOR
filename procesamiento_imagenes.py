@@ -33,6 +33,13 @@ def umbralizar_imagen(imagen):
     return umbral
 
 
+def redimensionar_imagen(imagen, tamaño=(224, 224)):
+    """
+    Redimensiona la imagen al tamaño especificado
+    """
+    return cv2.resize(imagen, tamaño)
+
+
 def procesar_dataset(ruta_entrada, ruta_salida):
     """
     Procesa todas las imágenes de un dataset
@@ -61,9 +68,10 @@ def procesar_dataset(ruta_entrada, ruta_salida):
                 contraste = mejorar_contraste(imagen)
                 sin_ruido = eliminar_ruido(contraste)
                 umbral = umbralizar_imagen(sin_ruido)
+                redimensionada = redimensionar_imagen(umbral)
 
                 # Guardar imagen
                 ruta_guardado = os.path.join(carpeta_salida, archivo)
-                cv2.imwrite(ruta_guardado, umbral)
+                cv2.imwrite(ruta_guardado, redimensionada)
 
         print(f"Procesada carpeta: {raiz}")
