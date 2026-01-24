@@ -8,6 +8,14 @@ ENV/
 __pycache__/
 *.pyc
 
+# Datasets y archivos procesados (muy grandes para GitHub)
+dataset/dataset_zips_procesados/
+dataset/procesado/
+temp_*/
+*.zip
+
+# Archivos CSV de características (muy grandes - generados por extraccion_caracteristicas.py)
+src/features/*.csv
 
 # Jupyter Notebook
 #.ipynb_checkpoints
