@@ -161,14 +161,14 @@ def extraer_hog(img):
     return descriptor.flatten()
 
 
-def extraer_caracteristicas_dataset(imagenes, etiquetas, metodo='hu'):
+def extraer_caracteristicas_dataset(imagenes, etiquetas, metodo='hu_moments'):
     """
     Extrae características de todas las imágenes del dataset.
     
     Args:
         imagenes: Array de imágenes
         etiquetas: Array de etiquetas
-        metodo: 'hu', 'sift' o 'hog'
+        metodo: 'hu_moments', 'sift' o 'hog'
         
     Returns:
         tuple: (caracteristicas, etiquetas)
@@ -183,14 +183,14 @@ def extraer_caracteristicas_dataset(imagenes, etiquetas, metodo='hu'):
         if (i + 1) % 100 == 0:
             print(f"Procesadas {i + 1}/{len(imagenes)} imágenes...")
         
-        if metodo == 'hu':
+        if metodo == 'hu_moments':
             features = extraer_momentos_hu(img)
         elif metodo == 'sift':
             features = extraer_sift(img)
         elif metodo == 'hog':
             features = extraer_hog(img)
         else:
-            raise ValueError(f"Método '{metodo}' no reconocido. Use 'hu', 'sift' o 'hog'")
+            raise ValueError(f"Método '{metodo}' no reconocido. Use 'hu_moments', 'sift' o 'hog'")
         
         caracteristicas.append(features)
     
@@ -207,7 +207,7 @@ def guardar_caracteristicas(caracteristicas, etiquetas, nombres_clases, nombre_b
         etiquetas: Array de etiquetas (nombres de clases)
         nombres_clases: Lista de nombres únicos de clases
         nombre_base: Nombre base del archivo
-        metodo: Método usado ('hu', 'sift', 'hog')
+        metodo: Método usado ('hu_moments', 'sift', 'hog')
     """
     if len(caracteristicas) == 0:
         print(f"⚠ No hay características para guardar ({metodo})")
@@ -228,14 +228,14 @@ def guardar_caracteristicas(caracteristicas, etiquetas, nombres_clases, nombre_b
     print(f"✓ Guardado CSV: {archivo_csv}")
 
 
-def procesar_dataset_completo(ruta_zip, nombre_base, metodos=['hu', 'sift', 'hog']):
+def procesar_dataset_completo(ruta_zip, nombre_base, metodos=['hu_moments', 'sift', 'hog']):
     """
     Pipeline completo: descomprime, carga imágenes y extrae características.
     
     Args:
         ruta_zip: Ruta al archivo ZIP con imágenes preprocesadas
         nombre_base: Nombre base para los archivos de salida
-        metodos: Lista de métodos a aplicar ('hu', 'sift', 'hog')
+        metodos: Lista de métodos a aplicar ('hu_moments', 'sift', 'hog')
     """
     print(f"\n{'='*70}")
     print(f"PROCESANDO DATASET: {nombre_base}")
@@ -279,7 +279,7 @@ def main():
     ]
     
     # Métodos de extracción de características
-    metodos = ['hu', 'sift', 'hog']
+    metodos = ['hu_moments', 'sift', 'hog']
     
     print("\n" + "="*70)
     print("EXTRACCIÓN DE CARACTERÍSTICAS DE DATASETS PREPROCESADOS")
