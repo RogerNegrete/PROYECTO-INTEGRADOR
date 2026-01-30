@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import pandas as pd
 from math import copysign, log10
+import time
+import gc
 
 
 def descomprimir_zip(ruta_zip, carpeta_salida):
@@ -14,6 +16,50 @@ def descomprimir_zip(ruta_zip, carpeta_salida):
     with zipfile.ZipFile(ruta_zip, "r") as zipf:
         zipf.extractall(carpeta_salida)
     print(f"✓ Descomprimido en: {carpeta_salida}")
+
+
+def generar_datos_proyecto(directorio_base):
+    """
+    Genera ground truth y cardinalidad a partir de la estructura de carpetas del dataset.
+    
+    Args:
+        directorio_base: Ruta al directorio con las carpetas de clases
+        
+    Returns:
+        tuple: (y_true, cardinalidad)
+            - y_true: Diccionario { 'nombre_archivo': 'clase' }
+            - cardinalidad: Diccionario { 'clase': cantidad_total }
+    """
+    # Diccionarios para almacenar la info
+    y_true = {}         # { 'nombre_archivo': 'clase' }
+    cardinalidad = {}   # { 'clase': cantidad_total }
+    
+    # Verificar si hay una carpeta extra nivel intermedio
+    contenido = os.listdir(directorio_base)
+    if len(contenido) == 1 and os.path.isdir(os.path.join(directorio_base, contenido[0])):
+        # Hay una carpeta extra, entrar en ella
+        directorio_base = os.path.join(directorio_base, contenido[0])
+        print(f"Detectada carpeta intermedia en ground truth, usando: {directorio_base}")
+    
+    # Obtener las subcarpetas (clases)
+    clases = [d for d in os.listdir(directorio_base) if os.path.isdir(os.path.join(directorio_base, d))]
+    
+    for clase in clases:
+        ruta_clase = os.path.join(directorio_base, clase)
+        # Contar archivos de imagen
+        imagenes = [f for f in os.listdir(ruta_clase) if f.lower().endswith(('.jpg', '.png', '.jpeg'))]
+        
+        # 1. Guardar Cardinalidad (Restricción de tamaño)
+        cardinalidad[clase] = len(imagenes)
+        
+        # 2. Guardar Ground Truth individual
+        for img in imagenes:
+            y_true[img] = clase
+    
+    print(f"\n✓ Ground Truth generado: {len(y_true)} imágenes en {len(clases)} clases")
+    print(f"  Cardinalidad por clase: {cardinalidad}")
+            
+    return y_true, cardinalidad
 
 
 def cargar_imagenes_desde_carpetas(ruta_dataset):
@@ -217,6 +263,14 @@ def guardar_caracteristicas(caracteristicas, etiquetas, nombres_clases, nombre_b
     script_dir = os.path.dirname(os.path.abspath(__file__))
     archivo_csv = os.path.join(script_dir, f"{nombre_base}_{metodo}.csv")
     
+    # Eliminar archivo si existe
+    if os.path.exists(archivo_csv):
+        try:
+            os.remove(archivo_csv)
+            print(f"✓ Archivo existente eliminado: {archivo_csv}")
+        except Exception as e:
+            print(f"⚠ No se pudo eliminar el archivo existente: {e}")
+    
     # Guardar como CSV
     print(f"\nGuardando características en CSV: {archivo_csv}")
     n_features = caracteristicas.shape[1]
@@ -224,8 +278,89 @@ def guardar_caracteristicas(caracteristicas, etiquetas, nombres_clases, nombre_b
     
     df = pd.DataFrame(caracteristicas, columns=columnas)
     df["clase"] = etiquetas
-    df.to_csv(archivo_csv, index=False)
-    print(f"✓ Guardado CSV: {archivo_csv}")
+    
+    # Intentar guardar con reintentos
+    max_intentos = 3
+    for intento in range(max_intentos):
+        try:
+            df.to_csv(archivo_csv, index=False)
+            print(f"✓ Guardado CSV: {archivo_csv}")
+            break
+        except PermissionError:
+            if intento < max_intentos - 1:
+                print(f"⚠ Archivo bloqueado. Esperando 2 segundos... (intento {intento + 1}/{max_intentos})")
+                gc.collect()  # Forzar garbage collection
+                time.sleep(2)
+            else:
+                print(f"❌ ERROR: No se puede guardar {archivo_csv}")
+                print(f"   Por favor cierra el archivo en Excel u otro programa y presiona ENTER para continuar...")
+                input()
+                try:
+                    df.to_csv(archivo_csv, index=False)
+                    print(f"✓ Guardado CSV: {archivo_csv}")
+                except Exception as e:
+                    print(f"❌ ERROR CRÍTICO: {e}")
+                    raise
+
+
+def guardar_ground_truth(y_true, cardinalidad, nombre_base):
+    """
+    Guarda el ground truth en formato CSV.
+    
+    Args:
+        y_true: Diccionario con {nombre_archivo: clase}
+        cardinalidad: Diccionario con {clase: cantidad}
+        nombre_base: Nombre base del archivo
+    """
+    # Guardar en el mismo directorio donde está el script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    archivo_csv = os.path.join(script_dir, f"{nombre_base}_ground_true.csv")
+    
+    # Eliminar archivo si existe
+    if os.path.exists(archivo_csv):
+        try:
+            os.remove(archivo_csv)
+            print(f"✓ Archivo ground truth existente eliminado: {archivo_csv}")
+        except Exception as e:
+            print(f"⚠ No se pudo eliminar el archivo ground truth existente: {e}")
+    
+    # Crear DataFrame con el ground truth
+    df = pd.DataFrame([
+        {"archivo": archivo, "clase": clase}
+        for archivo, clase in y_true.items()
+    ])
+    
+    # Ordenar por clase y luego por nombre de archivo
+    df = df.sort_values(by=["clase", "archivo"]).reset_index(drop=True)
+    
+    # Guardar CSV con reintentos
+    print(f"\nGuardando Ground Truth en CSV: {archivo_csv}")
+    
+    max_intentos = 3
+    for intento in range(max_intentos):
+        try:
+            df.to_csv(archivo_csv, index=False)
+            print(f"✓ Ground Truth guardado: {archivo_csv}")
+            print(f"  Total de imágenes: {len(y_true)}")
+            print(f"  Cardinalidad por clase: {cardinalidad}")
+            break
+        except PermissionError:
+            if intento < max_intentos - 1:
+                print(f"⚠ Archivo bloqueado. Esperando 2 segundos... (intento {intento + 1}/{max_intentos})")
+                gc.collect()
+                time.sleep(2)
+            else:
+                print(f"❌ ERROR: No se puede guardar {archivo_csv}")
+                print(f"   Por favor cierra el archivo en Excel u otro programa y presiona ENTER para continuar...")
+                input()
+                try:
+                    df.to_csv(archivo_csv, index=False)
+                    print(f"✓ Ground Truth guardado: {archivo_csv}")
+                    print(f"  Total de imágenes: {len(y_true)}")
+                    print(f"  Cardinalidad por clase: {cardinalidad}")
+                except Exception as e:
+                    print(f"❌ ERROR CRÍTICO: {e}")
+                    raise
 
 
 def procesar_dataset_completo(ruta_zip, nombre_base, metodos=['hu_moments', 'sift', 'hog']):
@@ -245,15 +380,19 @@ def procesar_dataset_completo(ruta_zip, nombre_base, metodos=['hu_moments', 'sif
     carpeta_temp = f"temp_{nombre_base}"
     descomprimir_zip(ruta_zip, carpeta_temp)
     
-    # 2. Cargar imágenes
+    # 2. Generar Ground Truth
+    y_true, cardinalidad = generar_datos_proyecto(carpeta_temp)
+    guardar_ground_truth(y_true, cardinalidad, nombre_base)
+    
+    # 3. Cargar imágenes
     imagenes, etiquetas, nombres_clases = cargar_imagenes_desde_carpetas(carpeta_temp)
     
-    # 3. Extraer características con cada método
+    # 4. Extraer características con cada método
     for metodo in metodos:
         caracteristicas, _ = extraer_caracteristicas_dataset(imagenes, etiquetas, metodo)
         guardar_caracteristicas(caracteristicas, etiquetas, nombres_clases, nombre_base, metodo)
     
-    # 4. Limpiar carpeta temporal
+    # 5. Limpiar carpeta temporal
     print(f"\nLimpiando carpeta temporal: {carpeta_temp}")
     import shutil
     shutil.rmtree(carpeta_temp)
@@ -297,6 +436,11 @@ def main():
     print("\n" + "="*70)
     print("✓ PROCESO COMPLETO FINALIZADO")
     print("="*70)
+    
+    # Ejemplo de uso de generar_datos_proyecto:
+    # Para generar ground truth después de descomprimir los datasets:
+    # gt_animales, card_animales = generar_datos_proyecto('temp_Cats_Dogs_Foxes/Cats_Dogs_Foxes_procesado')
+    # gt_vocales, card_vocales = generar_datos_proyecto('temp_Vocals_UPIIT2025/Vocals_UPIIT2025_procesado')
     
 
 if __name__ == "__main__":

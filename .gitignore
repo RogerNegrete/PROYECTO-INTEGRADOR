@@ -14,8 +14,9 @@ dataset/procesado/
 temp_*/
 *.zip
 
-# Archivos CSV de características (muy grandes - generados por extraccion_caracteristicas.py)
-src/features/*.csv
+# Archivos CSV y PNG (generados por los scripts)
+*.csv
+*.png
 
 # Jupyter Notebook
 #.ipynb_checkpoints
