@@ -292,40 +292,33 @@ def visualizar_resultados(resultados, nombre_dataset):
     results_dir = os.path.join(script_dir, '..', '..', 'results', 'kmeans_restricted')
     os.makedirs(results_dir, exist_ok=True)
     
-    # Crear figura con subplots
-    n_metricas = len(['silhouette', 'dunn', 'ari', 'nmi', 'ami'])
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-    fig.suptitle(f'Análisis K-Means con Restricciones - {nombre_dataset}', fontsize=16)
-    axes = axes.flatten()
+    # Obtener las métricas del único método
+    metodo = list(resultados.keys())[0]
+    metricas = resultados[metodo]['metricas']
     
-    # 1. Métricas por método
-    metodos = list(resultados.keys())
-    metricas_nombres = ['silhouette', 'dunn', 'ari', 'nmi', 'ami']
+    # Crear figura con subplots para las métricas
+    metricas_nombres = [m for m in ['silhouette', 'dunn', 'ari', 'nmi', 'ami'] if m in metricas]
+    n_metricas = len(metricas_nombres)
+    
+    fig, axes = plt.subplots(1, n_metricas, figsize=(5*n_metricas, 5))
+    fig.suptitle(f'Métricas K-Means con Restricciones - {nombre_dataset}', fontsize=16)
+    
+    if n_metricas == 1:
+        axes = [axes]
     
     for idx, metrica in enumerate(metricas_nombres):
-        valores = []
-        for metodo in metodos:
-            if metrica in resultados[metodo]['metricas']:
-                valores.append(resultados[metodo]['metricas'][metrica])
-            else:
-                valores.append(0)
-        
         ax = axes[idx]
-        bars = ax.bar(metodos, valores, color=['#1f77b4', '#ff7f0e', '#2ca02c'])
+        valor = metricas[metrica]
+        
+        bar = ax.bar([metrica], [valor], color='#2ca02c', width=0.5)
         ax.set_title(f'{metrica.upper()}')
         ax.set_ylabel('Valor')
-        ax.tick_params(axis='x', rotation=45)
-        ax.grid(True, alpha=0.3)
+        ax.grid(True, alpha=0.3, axis='y')
+        ax.set_ylim([min(0, valor * 1.1), max(1, valor * 1.1)])
         
-        # Agregar valores encima de cada barra
-        for bar, valor in zip(bars, valores):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{valor:.4f}',
-                   ha='center', va='bottom', fontsize=9, fontweight='bold')
-    
-    # Ocultar el subplot extra (tenemos 6 posiciones, usamos 5)
-    axes[5].axis('off')
+        # Agregar valor encima de la barra
+        ax.text(0, valor, f'{valor:.4f}',
+               ha='center', va='bottom', fontsize=12, fontweight='bold')
     
     plt.tight_layout()
     ruta_fig = os.path.join(results_dir, f'{nombre_dataset}_metricas.png')
@@ -333,27 +326,24 @@ def visualizar_resultados(resultados, nombre_dataset):
     print(f"✓ Gráfica guardada: {ruta_fig}")
     plt.close()
     
-    # 2. Distribución de clusters por método
-    fig, axes = plt.subplots(1, len(metodos), figsize=(15, 5))
+    # Distribución de clusters
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     fig.suptitle(f'Distribución de Clusters - {nombre_dataset}', fontsize=16)
     
-    for idx, metodo in enumerate(metodos):
-        ax = axes[idx] if len(metodos) > 1 else axes
-        labels = resultados[metodo]['labels']
-        unique, counts = np.unique(labels, return_counts=True)
-        
-        bars = ax.bar(unique, counts, color='steelblue')
-        ax.set_title(f'{metodo}')
-        ax.set_xlabel('Cluster ID')
-        ax.set_ylabel('Número de muestras')
-        ax.grid(True, alpha=0.3)
-        
-        # Agregar valores encima de cada barra
-        for bar, count in zip(bars, counts):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{int(count)}',
-                   ha='center', va='bottom', fontsize=10, fontweight='bold')
+    labels = resultados[metodo]['labels']
+    unique, counts = np.unique(labels, return_counts=True)
+    
+    bars = ax.bar(unique, counts, color='steelblue')
+    ax.set_xlabel('Cluster ID', fontsize=12)
+    ax.set_ylabel('Número de muestras', fontsize=12)
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    # Agregar valores encima de cada barra
+    for bar, count in zip(bars, counts):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+               f'{int(count)}',
+               ha='center', va='bottom', fontsize=11, fontweight='bold')
     
     plt.tight_layout()
     ruta_fig = os.path.join(results_dir, f'{nombre_dataset}_distribucion.png')
@@ -424,36 +414,8 @@ def procesar_dataset(ruta_csv, nombre_dataset, labels_true_csv=None):
     
     resultados = {}
     
-    # 1. K-Means sin restricciones
-    print(f"\n--- K-Means SIN restricciones ---")
-    kmeans_sin = KMeansRestricted(n_clusters=n_clases, random_state=42)
-    kmeans_sin.fit(X_scaled)
-    unique_sin, counts_sin = np.unique(kmeans_sin.labels_, return_counts=True)
-    print(f"Clusters creados: {len(unique_sin)}")
-    print(f"Tamaño de cada cluster: {dict(zip(unique_sin, counts_sin))}")
-    metricas_sin = evaluar_clustering(X_scaled, kmeans_sin.labels_, labels_true)
-    resultados['Sin Restricciones'] = {
-        'labels': kmeans_sin.labels_,
-        'metricas': metricas_sin,
-        'inercia': kmeans_sin.inertia_
-    }
-    
-    # 2. K-Means con restricción mínima
+    # K-Means con restricciones min y max
     min_size = int(tamaño_ideal * 0.5)  # Mínimo 50% del tamaño ideal
-    print(f"\n--- K-Means CON restricción MÍNIMA (min={min_size}) ---")
-    kmeans_min = KMeansRestricted(n_clusters=n_clases, min_size=min_size, random_state=42)
-    kmeans_min.fit(X_scaled)
-    unique_min, counts_min = np.unique(kmeans_min.labels_, return_counts=True)
-    print(f"Clusters creados: {len(unique_min)}")
-    print(f"Tamaño de cada cluster: {dict(zip(unique_min, counts_min))}")
-    metricas_min = evaluar_clustering(X_scaled, kmeans_min.labels_, labels_true)
-    resultados['Con Min Size'] = {
-        'labels': kmeans_min.labels_,
-        'metricas': metricas_min,
-        'inercia': kmeans_min.inertia_
-    }
-    
-    # 3. K-Means con restricciones min y max
     max_size = int(tamaño_ideal * 1.5)  # Máximo 150% del tamaño ideal
     print(f"\n--- K-Means CON restricciones MIN y MAX (min={min_size}, max={max_size}) ---")
     kmeans_minmax = KMeansRestricted(n_clusters=n_clases, min_size=min_size, max_size=max_size, random_state=42)
