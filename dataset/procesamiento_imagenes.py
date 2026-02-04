@@ -71,6 +71,16 @@ def umbralizar_imagen(imagen):
     return umbral
 
 
+def rotar_imagen_90_izquierda(imagen):
+    """
+    Rota la imagen 90° hacia la izquierda (sentido antihorario)
+    """
+    # Rotar 90° antihorario usando cv2.ROTATE_90_COUNTERCLOCKWISE
+    imagen_rotada = cv2.rotate(imagen, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    
+    return imagen_rotada
+
+
 def redimensionar_imagen(imagen, tamaño=(224, 224)):
     """
     Redimensiona la imagen al tamaño especificado
@@ -101,6 +111,14 @@ def procesar_dataset(ruta_entrada, ruta_salida):
 
                 if imagen is None:
                     continue
+
+                # Detectar si la imagen pertenece a las vocales O, U o I
+                nombre_clase = os.path.basename(raiz).upper()
+                vocales_a_rotar = ['O', 'U', 'I']
+                
+                # Aplicar rotación si es necesario
+                if nombre_clase in vocales_a_rotar:
+                    imagen = rotar_imagen_90_izquierda(imagen)
 
                 # Procesamiento
                 contraste = mejorar_contraste(imagen)
