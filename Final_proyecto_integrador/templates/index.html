@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clustering Online con Restricciones de Tamaño</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #2c3e50;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: #34495e;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #3498db;
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #bdc3c7;
+            font-size: 0.95em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 25px;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #4a5f7f;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .mode-tab.active {
+            border-color: #3498db;
+            background: #3d5266;
+        }
+
+        .live-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .live-status {
+            margin-top: 10px;
+            color: #bdc3c7;
+            font-size: 0.9em;
+        }
+
+        .live-upload {
+            margin-top: 15px;
+        }
+
+        .live-label-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #4a5f7f;
+            border-radius: 5px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+
+        .config-panel {
+            background: #34495e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+
+        .config-section {
+            margin-bottom: 20px;
+        }
+
+        .config-section h3 {
+            color: #3498db;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #4a5f7f;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: #2c3e50;
+        }
+
+        .radio-option:hover {
+            background: #3d5266;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .radio-option.selected {
+            border-color: #3498db;
+            background: #3d5266;
+        }
+
+        .option-info {
+            flex: 1;
+        }
+
+        .option-name {
+            font-weight: bold;
+            color: #ecf0f1;
+        }
+
+        .option-desc {
+            font-size: 0.85em;
+            color: #95a5a6;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            color: #ecf0f1;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .input-group input[type="number"],
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #4a5f7f;
+            border-radius: 5px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            font-size: 1em;
+        }
+
+        .input-group input[type="text"]::placeholder {
+            color: #7f8c8d;
+        }
+
+        .upload-section {
+            background: #34495e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .drop-zone {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 50px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #2c3e50;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            background: #3d5266;
+            border-color: #5dade2;
+        }
+
+        .drop-zone-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+        }
+
+        .drop-zone-text {
+            font-size: 1.2em;
+            color: #ecf0f1;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-hint {
+            color: #95a5a6;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: background 0.2s;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            background: #2980b9;
+        }
+
+        .button:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .button-secondary {
+            background: #95a5a6;
+        }
+
+        .button-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .preview-section {
+            margin-top: 15px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .preview-title {
+            color: #3498db;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .preview-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-badge {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
+        }
+
+        .preview-badge-labeled {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            box-shadow: 0 2px 6px rgba(39, 174, 96, 0.3);
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .preview-item {
+            position: relative;
+        }
+
+        .preview-remove {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .preview-remove:hover {
+            background: #c0392b;
+        }
+
+        .view-more-card {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 200px;
+        }
+
+        .view-more-card:hover {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.5);
+        }
+
+        .view-more-text {
+            color: #3498db;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .view-more-card:hover .view-more-text {
+            color: #ecf0f1;
+        }
+
+        .view-more-button {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .view-more-card:hover .view-more-button {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .histogram-section {
+            background: #34495e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .histogram-container {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        #histogramCanvas {
+            width: 100%;
+            height: 300px;
+            display: block;
+            background: #1a252f;
+            border-radius: 4px;
+        }
+
+        .histogram-modern {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+            background: #2c3e50;
+            border-radius: 8px;
+            margin-top: 10px;
+            justify-content: space-around;
+        }
+
+        .histogram-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .histogram-bar-container {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            position: relative;
+        }
+
+        .histogram-bar {
+            width: 80%;
+            background: linear-gradient(to top, #3498db, #5dade2);
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            transition: all 0.4s ease;
+            box-shadow: 0 -4px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .histogram-bar:hover {
+            transform: scaleY(1.05);
+            box-shadow: 0 -6px 20px rgba(52, 152, 219, 0.5);
+        }
+
+        .histogram-count {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ecf0f1;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .histogram-thumbnail {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #3498db;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            background: #1a252f;
+        }
+
+        .histogram-label {
+            color: #ecf0f1;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .histogram-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            border-color: rgba(52, 152, 219, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-label {
+            color: #95a5a6;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            color: #3498db;
+            font-size: 1.8em;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .processing-status {
+            text-align: center;
+            padding: 12px;
+            background: linear-gradient(90deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+            border-radius: 6px;
+            margin-top: 10px;
+            color: #ecf0f1;
+            font-weight: 500;
+            border-left: 3px solid #3498db;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 2px solid #3498db;
+        }
+
+        .preview-label {
+            margin-top: 5px;
+        }
+
+        .preview-label input {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #4a5f7f;
+            border-radius: 3px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            font-size: 0.8em;
+        }
+
+        .preview-filename {
+            font-size: 0.75em;
+            color: #95a5a6;
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .metricas-section {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .metricas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .metrica-card {
+            background: #2c3e50;
+            padding: 12px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .metrica-titulo {
+            font-size: 0.8em;
+            color: #95a5a6;
+            margin-bottom: 5px;
+        }
+
+        .metrica-valor {
+            font-size: 1.5em;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .results-section {
+            margin-top: 25px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .result-card {
+            background: #2c3e50;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .result-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .result-info {
+            padding: 12px;
+        }
+
+        .result-filename {
+            font-weight: bold;
+            color: #ecf0f1;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ==================== NUEVO DISEÑO DE CLUSTERS ==================== */
+        .cluster-card {
+            background: #34495e;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .cluster-card:hover {
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .cluster-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 22px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            cursor: pointer;
+            border-bottom: 2px solid rgba(52, 152, 219, 0.2);
+            transition: background 0.3s ease;
+        }
+
+        .cluster-header:hover {
+            background: linear-gradient(135deg, #34495e 0%, #3d5266 100%);
+        }
+
+        .cluster-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .cluster-badge {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1em;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+        }
+
+        .cluster-name {
+            color: #ecf0f1;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .cluster-stats {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .cluster-count {
+            background: rgba(52, 152, 219, 0.15);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: #3498db;
+            font-weight: 600;
+            font-size: 0.95em;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .cluster-toggle {
+            background: none;
+            border: none;
+            color: #3498db;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cluster-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .cluster-preview {
+            padding: 15px 22px;
+            background: #2c3e50;
+        }
+
+        .cluster-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .cluster-preview-item {
+            background: #34495e;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+        }
+
+        .cluster-preview-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+
+        .cluster-preview-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .cluster-preview-overlay {
+            background: #2c3e50;
+            padding: 10px;
+        }
+
+        .cluster-preview-filename {
+            color: #ecf0f1;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cluster-preview-gt {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .cluster-preview-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.75em;
+        }
+
+        .cluster-preview-stat {
+            display: flex;
+            justify-content: space-between;
+            color: #95a5a6;
+        }
+
+        .cluster-preview-stat-value {
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .cluster-view-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.15) 0%, rgba(41, 128, 185, 0.15) 100%);
+            border: 2px dashed rgba(52, 152, 219, 0.4);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            aspect-ratio: 1;
+        }
+
+        .cluster-view-more:hover {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.3) 0%, rgba(41, 128, 185, 0.3) 100%);
+            border-color: #3498db;
+            transform: scale(1.05);
+        }
+
+        .cluster-view-more-content {
+            text-align: center;
+            color: #3498db;
+        }
+
+        .cluster-view-more-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .cluster-view-more-text {
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .cluster-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .cluster-content.expanded {
+            max-height: 5000px;
+        }
+
+        .cluster-full-grid {
+            padding: 22px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            background: #2c3e50;
+        }
+
+        .cluster-full-item {
+            background: #34495e;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .cluster-full-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+        }
+
+        .cluster-full-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .cluster-full-info {
+            padding: 12px;
+        }
+
+        .cluster-full-filename {
+            color: #ecf0f1;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cluster-full-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.8em;
+        }
+
+        .cluster-stat-row {
+            display: flex;
+            justify-content: space-between;
+            color: #95a5a6;
+        }
+
+        .cluster-stat-value {
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .cluster-label-badge {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .result-cluster {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .result-label {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            margin-left: 5px;
+        }
+
+        .result-stats {
+            font-size: 0.85em;
+            color: #95a5a6;
+        }
+
+        .result-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .confidence-bar {
+            height: 6px;
+            background: #34495e;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #3498db;
+            transition: width 0.3s;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #3498db;
+            font-size: 1.1em;
+        }
+
+        .spinner {
+            border: 3px solid #34495e;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #c0392b;
+            color: white;
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .success {
+            background: #27ae60;
+            color: white;
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .warning {
+            background: #f39c12;
+            color: #1f2d3d;
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .info-box {
+            background: #34495e;
+            padding: 12px;
+            border-radius: 5px;
+            color: #ecf0f1;
+            font-size: 0.85em;
+            margin-top: 15px;
+            border-left: 3px solid #3498db;
+        }
+
+        /* Modal de etiquetado */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #34495e;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-back-button {
+            background: none;
+            border: none;
+            color: #95a5a6;
+            font-size: 1em;
+            cursor: pointer;
+            padding: 5px 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s;
+        }
+
+        .modal-back-button:hover {
+            color: #3498db;
+        }
+
+        .modal-title {
+            color: #3498db;
+            font-size: 1.4em;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #95a5a6;
+            font-size: 1.8em;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #e74c3c;
+        }
+
+        .modal-body {
+            color: #ecf0f1;
+        }
+
+        .modal-description {
+            color: #95a5a6;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+
+        #clusterSizesModalText {
+            color: #ecf0f1;
+            font-size: 1.05em;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #4a5f7f;
+            border-radius: 5px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-button-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .modal-button-primary:hover {
+            background: #2980b9;
+        }
+
+        .modal-button-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .modal-button-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .label-continue-modal .modal-content {
+            max-width: 500px;
+        }
+
+        .label-preview {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #2c3e50;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        .label-preview img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .label-preview-info {
+            flex: 1;
+        }
+
+        .label-preview-name {
+            color: #3498db;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .label-preview-label {
+            color: #27ae60;
+            font-size: 0.9em;
+        }
+
+        .label-count {
+            background: #3498db;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Clustering Online con Restricciones de Tamaño</h1>
+            <p class="subtitle">Sistema que aprende progresivamente respetando tamaños de clusters</p>
+        </header>
+
+        <div class="main-content">
+            <div class="config-panel">
+                <div class="config-section">
+                    <h3>Método de Extracción</h3>
+                    <div class="radio-group" id="metodoOptions"></div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Configuración</h3>
+                    <div class="input-group">
+                        <label for="nClusters">Número de Clusters:</label>
+                        <input type="number" id="nClusters" min="2" max="20" value="3">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="distanceThreshold">Umbral de Distancia (Similitud):</label>
+                        <input type="number" id="distanceThreshold" step="0.05" min="0.1" max="2.0" value="0.65">
+                        <div style="font-size: 0.8em; color: #95a5a6; margin-top: 4px;">
+                            Menor (0.4) = Más estricto (más grupos). Mayor (0.9) = Más permisivo (menos grupos).
+                        </div>
+                    </div>
+
+                    <div id="batchClusterSizesSection">
+                        <div class="input-group">
+                            <label for="clusterSizes">Tamaños de Clusters (separados por comas) - OBLIGATORIO:</label>
+                            <input type="text" id="clusterSizes" placeholder="Ej: 5,7,8 (obligatorio)">
+                        </div>
+                        <div class="info-box" style="background: #1a252f; border-left: 3px solid #e74c3c;">
+                            <strong>⚠️ Obligatorio:</strong> Debes especificar los tamaños de clusters separados por comas. La suma debe ser IGUAL al total de imágenes que subas.
+                        </div>
+                    </div>
+                    <div id="liveClusterSizesSection" style="display: none;">
+                        <div class="input-group">
+                            <label for="liveTotalImages">Cantidad total de imágenes (LIVE):</label>
+                            <input type="number" id="liveTotalImages" min="1" placeholder="Ej: 30">
+                        </div>
+                        <div class="input-group">
+                            <label for="liveClusterSizes">Tamaños de Clusters (LIVE, separados por comas) - OPCIONAL:</label>
+                            <input type="text" id="liveClusterSizes" placeholder="Ej: 40,40,20">
+                        </div>
+                        <div class="info-box" style="background: #1a252f; border-left: 3px solid #3498db;">
+                            <strong>Nota:</strong> La suma de tamaños debe ser igual al total. Ej: 100 imágenes y 3 clusters → 34,33,33.
+                        </div>
+                        <div class="info-box" id="liveClusterSizesPreview" style="background: #1a252f; border-left: 3px solid #3498db;">
+                            <strong>Tamaños calculados:</strong> -
+                        </div>
+                    </div>
+                </div>
+                <div class="config-section">
+                    <button class="button button-secondary" id="resetButton">
+                        Reiniciar Sistema
+                    </button>
+                </div>
+
+                <div class="info-box">
+                    <strong>Info:</strong> Las etiquetas son opcionales y se usan solo para evaluar el modelo.
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <div class="mode-tabs">
+                    <button class="mode-tab active" id="modeBatchTab">Modo Batch / Streaming</button>
+                    <button class="mode-tab" id="modeLiveTab">Modo Online LIVE</button>
+                </div>
+
+                <div id="batchModeContainer">
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">📂</div>
+                    <div class="drop-zone-text">Arrastra las imágenes aquí</div>
+                    <div class="drop-zone-hint">o haz clic para seleccionar archivos</div>
+                </div>
+                <input type="file" id="fileInput" multiple accept="image/png,image/jpeg,image/jpg,image/avif,image/webp">
+                
+                <div id="previewSection" class="preview-section" style="display: none;">
+                    <div class="preview-header">
+                        <h3 class="preview-title" id="totalImagesCounter">Total de imágenes: 0</h3>
+                        <div class="preview-counter" id="labelCountersContainer">
+                            </div>
+                    </div>
+                    <div class="preview-grid" id="previewGrid"></div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button class="button" id="processButton" disabled>
+                        Procesar Imágenes
+                    </button>
+                    <button class="button button-secondary" id="clearAllButton" style="display: none;">
+                        Eliminar Todas las Imágenes
+                    </button>
+                </div>
+                </div>
+
+                <div id="liveModeContainer" style="display: none;">
+                    <div class="info-box" style="background: #1a252f; border-left: 3px solid #27ae60;">
+                        <strong>Online LIVE:</strong> Envía imágenes una por una y procesa inmediatamente.
+                    </div>
+
+                    <div class="live-controls">
+                        <button class="button" id="liveStartButton">Iniciar LIVE</button>
+                        <button class="button button-secondary" id="liveStopButton" disabled>Detener LIVE</button>
+                    </div>
+
+                    <div class="live-upload">
+                        <div class="drop-zone" id="liveDropZone">
+                            <div class="drop-zone-icon">🟢</div>
+                            <div class="drop-zone-text">Arrastra una imagen aquí</div>
+                            <div class="drop-zone-hint">o haz clic para seleccionar</div>
+                        </div>
+                        <div id="messageArea"></div>
+                        <input type="file" id="liveFileInput" accept="image/png,image/jpeg,image/jpg,image/avif,image/webp" style="display: none;">
+
+                        <input type="text" id="liveLabelInput" class="live-label-input" placeholder="Etiqueta opcional (ej: gato)">
+
+                        <button class="button" id="liveSendButton" disabled>
+                            Enviar Imagen
+                        </button>
+                        <div class="live-status" id="liveStatus">LIVE detenido.</div>
+                    </div>
+                </div>
+
+                <div id="histogramSection" class="histogram-section">
+                    <h3 style="color: #3498db;">📊 Histograma de Clusters en Tiempo Real</h3>
+                    <div class="processing-status" id="processingStatus">
+                        Esperando procesamiento...
+                    </div>
+                    <div id="histogramContainer"></div>
+                    <div class="histogram-stats" id="histogramStats"></div>
+                </div>
+
+                <div id="metricasSection" class="metricas-section" style="display: none;">
+                    <h3 style="color: #3498db;">Métricas de Evaluación</h3>
+                    <div class="metricas-grid" id="metricasGrid"></div>
+                    <div id="metricasInfo" style="margin-top: 10px; color: #95a5a6; font-size: 0.85em;"></div>
+                </div>
+
+                <div class="results-section" id="resultsSection" style="display: none;">
+                    <h2 style="color: #3498db; margin-bottom: 20px;">📊 Resultados de Clustering</h2>
+                    <div id="clustersContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="labelQuestionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">¿Quieres etiquetar estas imágenes?</h2>
+                <button class="modal-close" onclick="closeLabelQuestionModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="label-preview">
+                    <div class="label-preview-info">
+                        <p class="modal-description">
+                            Tienes <span class="label-count" id="unlabeledImageCount">0</span> imagen(es) sin etiquetar
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-button modal-button-secondary" onclick="skipBatchLabel()">
+                        Continuar sin etiqueta
+                    </button>
+                    <button class="modal-button modal-button-primary" onclick="openBatchLabelFromQuestion()">
+                        Sí, etiquetar lote
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="batchLabelModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-back-button" onclick="goBackToBatchQuestion()">
+                    ← Volver
+                </button>
+                <h2 class="modal-title" style="flex: 1; text-align: center;">- Asigne un nombre a las etiquetas</h2>
+                <button class="modal-close" onclick="closeBatchLabelModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">
+                    Aplica una etiqueta común a las <strong id="batchImageCount">0</strong> imágenes seleccionadas
+                </p>
+                <input type="text" 
+                       id="batchLabelInput" 
+                       class="modal-input" 
+                       placeholder="Ej: Fauna Ártica, Gatos, etc.">
+                <div class="modal-buttons">
+                    <button class="modal-button modal-button-primary" onclick="applyBatchLabel()">
+                        Guardar Etiqueta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="clusterSizesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Tamaños de Clusters</h2>
+                <button class="modal-close" onclick="closeClusterSizesModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="label-preview">
+                    <div class="label-preview-info">
+                        <p class="modal-description" id="clusterSizesModalText">
+                            Ingrese los tamaños de clusters separados por comas.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-button modal-button-primary" onclick="closeClusterSizesModal()">
+                        Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let selectedMetodo = 'hog';
+        let imageLabels = {};
+        let fileCounter = 0; // Para IDs únicos
+        let currentSessionCount = 0; // Imágenes procesadas en esta sesión
+        const PREVIEW_LIMIT = 15; // Límite de imágenes mostradas
+        let isExpanded = false; // Estado de expansión de la vista previa
+        let clusterRepresentatives = {}; // Imágenes representativas por cluster
+        let lastBatchFiles = []; // Archivos del último lote agregado
+        let currentMode = 'batch';
+        let liveRunning = false;
+        let liveEventSource = null;
+        let liveSelectedFile = null;
+        let liveResults = [];
+        // CAMBIO: Inicializar con umbral
+        let batchConfig = { metodo: 'hog', nClusters: 3, clusterSizes: '', threshold: 0.65 };
+        let liveConfig = { metodo: 'hog', nClusters: 3, totalImages: '', clusterSizes: '', threshold: 0.65 };
+
+        // Cargar info de metodos disponibles
+        async function loadInfo() {
+            try {
+                const response = await fetch('/api/info');
+                const data = await response.json();
+                
+                // Renderizar metodos
+                const metodoOptions = document.getElementById('metodoOptions');
+                data.metodos.forEach((metodo, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'radio-option' + (index === 0 ? ' selected' : '');
+                    div.innerHTML = `
+                        <input type="radio" name="metodo" value="${metodo.id}" ${index === 0 ? 'checked' : ''}>
+                        <div class="option-info">
+                            <div class="option-name">${metodo.name}</div>
+                            <div class="option-desc">${metodo.descripcion} (${metodo.velocidad})</div>
+                        </div>
+                    `;
+                    div.onclick = () => selectOption(div, metodo.id);
+                    metodoOptions.appendChild(div);
+                });
+            } catch (error) {
+                showMessage('Error al cargar información: ' + error.message, 'error');
+            }
+        }
+
+        function selectOption(element, value) {
+            const siblings = element.parentElement.children;
+            for (let sibling of siblings) {
+                sibling.classList.remove('selected');
+            }
+            element.classList.add('selected');
+            element.querySelector('input').checked = true;
+            selectedMetodo = value;
+        }
+
+        function applyMetodoSelection(value) {
+            selectedMetodo = value;
+            const inputs = document.querySelectorAll('input[name="metodo"]');
+            inputs.forEach((input) => {
+                const option = input.closest('.radio-option');
+                if (input.value === value) {
+                    input.checked = true;
+                    option.classList.add('selected');
+                } else {
+                    input.checked = false;
+                    option.classList.remove('selected');
+                }
+            });
+        }
+
+        function saveConfig(mode) {
+            const nClustersValue = document.getElementById('nClusters').value;
+            // CAMBIO: Leer threshold
+            const thresholdValue = document.getElementById('distanceThreshold').value;
+            
+            if (mode === 'live') {
+                liveConfig = {
+                    metodo: selectedMetodo,
+                    nClusters: parseInt(nClustersValue || '3', 10),
+                    totalImages: document.getElementById('liveTotalImages').value,
+                    clusterSizes: document.getElementById('liveClusterSizes').value,
+                    threshold: thresholdValue // Guardar
+                };
+            } else {
+                batchConfig = {
+                    metodo: selectedMetodo,
+                    nClusters: parseInt(nClustersValue || '3', 10),
+                    clusterSizes: document.getElementById('clusterSizes').value,
+                    threshold: thresholdValue // Guardar
+                };
+            }
+        }
+
+        function applyConfig(mode) {
+            const config = mode === 'live' ? liveConfig : batchConfig;
+            document.getElementById('nClusters').value = config.nClusters || 3;
+            // CAMBIO: Restaurar threshold
+            document.getElementById('distanceThreshold').value = config.threshold || 0.65;
+            
+            applyMetodoSelection(config.metodo || 'hog');
+
+            if (mode === 'live') {
+                document.getElementById('liveTotalImages').value = config.totalImages || '';
+                document.getElementById('liveClusterSizes').value = config.clusterSizes || '';
+                updateLiveClusterSizesPreview();
+            } else {
+                document.getElementById('clusterSizes').value = config.clusterSizes || '';
+            }
+        }
+
+        function setMode(mode) {
+            saveConfig(currentMode);
+            currentMode = mode;
+            const batchTab = document.getElementById('modeBatchTab');
+            const liveTab = document.getElementById('modeLiveTab');
+            const batchContainer = document.getElementById('batchModeContainer');
+            const liveContainer = document.getElementById('liveModeContainer');
+            const batchClusterSizes = document.getElementById('batchClusterSizesSection');
+            const liveClusterSizes = document.getElementById('liveClusterSizesSection');
+
+            if (mode === 'live') {
+                batchTab.classList.remove('active');
+                liveTab.classList.add('active');
+                batchContainer.style.display = 'none';
+                liveContainer.style.display = 'block';
+                batchClusterSizes.style.display = 'none';
+                liveClusterSizes.style.display = 'block';
+                applyConfig('live');
+            } else {
+                liveTab.classList.remove('active');
+                batchTab.classList.add('active');
+                liveContainer.style.display = 'none';
+                batchContainer.style.display = 'block';
+                batchClusterSizes.style.display = 'block';
+                liveClusterSizes.style.display = 'none';
+                applyConfig('batch');
+            }
+        }
+
+        function updateLiveClusterSizesPreview() {
+            const totalInput = document.getElementById('liveTotalImages');
+            const sizesInput = document.getElementById('liveClusterSizes');
+            const preview = document.getElementById('liveClusterSizesPreview');
+            const nClusters = parseInt(document.getElementById('nClusters').value || '0', 10);
+            const total = parseInt(totalInput.value || '0', 10);
+            const sizesRaw = (sizesInput.value || '').trim();
+
+            if (sizesRaw) {
+                const sizes = sizesRaw.split(',').map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v));
+                if (!nClusters || sizes.length !== nClusters) {
+                    preview.innerHTML = '<strong>Tamaños calculados:</strong> Número de tamaños no coincide con clusters';
+                    return;
+                }
+                const sum = sizes.reduce((a, b) => a + b, 0);
+                preview.innerHTML = `<strong>Tamaños calculados:</strong> ${sizes.join(',')} (total: ${sum})`;
+                return;
+            }
+
+            if (!nClusters || !total || total <= 0) {
+                preview.innerHTML = '<strong>Tamaños calculados:</strong> -';
+                return;
+            }
+
+            if (total < nClusters) {
+                preview.innerHTML = '<strong>Tamaños calculados:</strong> Total menor que número de clusters';
+                return;
+            }
+
+            const base = Math.floor(total / nClusters);
+            const resto = total % nClusters;
+            const sizes = [];
+            for (let i = 0; i < nClusters; i++) {
+                sizes.push(base + (i < resto ? 1 : 0));
+            }
+
+            preview.innerHTML = `<strong>Tamaños calculados:</strong> ${sizes.join(',')}`;
+        }
+
+        // Drag & drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        // Tabs de modo
+        document.getElementById('modeBatchTab').addEventListener('click', () => setMode('batch'));
+        document.getElementById('modeLiveTab').addEventListener('click', () => setMode('live'));
+
+        dropZone.onclick = () => fileInput.click();
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+            e.target.value = ''; // Limpiar input para poder seleccionar los mismos archivos
+        });
+
+        // Online LIVE: drag & drop
+        const liveDropZone = document.getElementById('liveDropZone');
+        const liveFileInput = document.getElementById('liveFileInput');
+        const liveSendButton = document.getElementById('liveSendButton');
+
+        liveDropZone.onclick = () => liveFileInput.click();
+
+        liveDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            liveDropZone.classList.add('dragover');
+        });
+
+        liveDropZone.addEventListener('dragleave', () => {
+            liveDropZone.classList.remove('dragover');
+        });
+
+        liveDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            liveDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                liveSelectedFile = e.dataTransfer.files[0];
+                liveSendButton.disabled = !liveSelectedFile;
+                showMessage(`Imagen seleccionada: ${liveSelectedFile.name}`, 'success');
+            }
+        });
+
+        liveFileInput.addEventListener('change', (e) => {
+            liveSelectedFile = e.target.files[0] || null;
+            liveSendButton.disabled = !liveSelectedFile;
+            if (liveSelectedFile) {
+                showMessage(`Imagen seleccionada: ${liveSelectedFile.name}`, 'success');
+            }
+            e.target.value = '';
+        });
+
+        document.getElementById('liveTotalImages').addEventListener('input', updateLiveClusterSizesPreview);
+        document.getElementById('liveClusterSizes').addEventListener('input', updateLiveClusterSizesPreview);
+        document.getElementById('nClusters').addEventListener('input', updateLiveClusterSizesPreview);
+
+        function handleFiles(files) {
+            // Agregar archivos nuevos sin borrar los existentes
+            const newFiles = Array.from(files);
+            
+            if (newFiles.length === 0) return;
+
+            const previewSection = document.getElementById('previewSection');
+            const previewGrid = document.getElementById('previewGrid');
+            
+            const newlyAdded = [];
+            newFiles.forEach((file) => {
+                // Verificar si ya existe el archivo
+                const existe = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                if (existe) {
+                    console.log(`Archivo duplicado omitido: ${file.name}`);
+                    return;
+                }
+                
+                // Agregar archivo a la lista
+                const fileId = `file_${fileCounter++}`;
+                file.fileId = fileId;
+                selectedFiles.push(file);
+                newlyAdded.push(file);
+            });
+
+            lastBatchFiles = newlyAdded;
+
+            // Renderizar vista previa
+            renderPreviewGrid();
+
+            previewSection.style.display = 'block';
+            document.getElementById('processButton').disabled = selectedFiles.length === 0;
+            document.getElementById('clearAllButton').style.display = selectedFiles.length > 0 ? 'inline-block' : 'none';
+            
+            showMessage(`${newFiles.length} imagen(es) agregada(s). Total: ${selectedFiles.length}`, 'success');
+            
+            // PREGUNTAR AUTOMÁTICAMENTE SI QUIERE ETIQUETAR después de agregar imágenes
+            setTimeout(() => {
+                const unlabeledCount = lastBatchFiles.filter(f => !imageLabels[f.name]).length;
+                if (unlabeledCount > 0) {
+                    openLabelQuestionModal(unlabeledCount);
+                }
+            }, 300);
+        }
+
+        function updateImageCounters() {
+            const totalCounter = document.getElementById('totalImagesCounter');
+            const labelCountersContainer = document.getElementById('labelCountersContainer');
+            
+            const totalImages = selectedFiles.length;
+            
+            // Actualizar total
+            if (totalCounter) {
+                totalCounter.textContent = `Total de imágenes: ${totalImages}`;
+            }
+            
+            // Contar por etiqueta
+            if (labelCountersContainer) {
+                const labelCounts = {};
+                let unlabeledCount = 0;
+                
+                selectedFiles.forEach(file => {
+                    const label = imageLabels[file.name];
+                    if (label) {
+                        if (!labelCounts[label]) {
+                            labelCounts[label] = 0;
+                        }
+                        labelCounts[label]++;
+                    } else {
+                        unlabeledCount++;
+                    }
+                });
+                
+                // Limpiar y crear badges dinámicos
+                labelCountersContainer.innerHTML = '';
+                
+                // Crear badge por cada etiqueta
+                Object.keys(labelCounts).sort().forEach(label => {
+                    const badge = document.createElement('span');
+                    badge.className = 'preview-badge preview-badge-labeled';
+                    badge.textContent = `${label}: ${labelCounts[label]}`;
+                    labelCountersContainer.appendChild(badge);
+                });
+                
+                // Agregar badge de "Sin etiqueta" si hay imágenes sin etiquetar
+                if (unlabeledCount > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'preview-badge';
+                    badge.textContent = `Sin etiqueta: ${unlabeledCount}`;
+                    labelCountersContainer.appendChild(badge);
+                }
+            }
+        }
+
+        function renderPreviewGrid() {
+            const previewGrid = document.getElementById('previewGrid');
+            previewGrid.innerHTML = ''; // Limpiar todo
+
+            const totalImages = selectedFiles.length;
+            const displayLimit = isExpanded ? totalImages : PREVIEW_LIMIT;
+            
+            // Renderizar imágenes visibles
+            for (let i = 0; i < Math.min(displayLimit, totalImages); i++) {
+                const file = selectedFiles[i];
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.dataset.fileId = file.fileId;
+                
+                // Botón de eliminar
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'preview-remove';
+                removeBtn.innerHTML = '×';
+                removeBtn.title = 'Eliminar imagen';
+                removeBtn.onclick = () => removeFile(file.fileId);
+                
+                const img = document.createElement('img');
+                img.className = 'preview-image';
+                img.src = URL.createObjectURL(file);
+                
+                const filenameDiv = document.createElement('div');
+                filenameDiv.className = 'preview-filename';
+                filenameDiv.textContent = file.name;
+                
+                // Mostrar etiqueta si existe
+                if (imageLabels[file.name]) {
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'preview-label';
+                    labelDiv.style.padding = '5px 10px';
+                    labelDiv.style.background = '#27ae60';
+                    labelDiv.style.color = 'white';
+                    labelDiv.style.borderRadius = '4px';
+                    labelDiv.style.fontSize = '0.85em';
+                    labelDiv.textContent = imageLabels[file.name];
+                    div.appendChild(removeBtn);
+                    div.appendChild(img);
+                    div.appendChild(labelDiv);
+                    div.appendChild(filenameDiv);
+                } else {
+                    div.appendChild(removeBtn);
+                    div.appendChild(img);
+                    div.appendChild(filenameDiv);
+                }
+                previewGrid.appendChild(div);
+            }
+
+            // Agregar tarjeta "Ver más" si hay más imágenes ocultas
+            if (totalImages > PREVIEW_LIMIT && !isExpanded) {
+                const hiddenCount = totalImages - PREVIEW_LIMIT;
+                const viewMoreCard = document.createElement('div');
+                viewMoreCard.className = 'view-more-card preview-item';
+                viewMoreCard.onclick = toggleExpandPreview;
+                
+                viewMoreCard.innerHTML = `
+                    <div class="view-more-text">+${hiddenCount} imágenes</div>
+                    <button class="view-more-button">Ver Más</button>
+                `;
+                
+                previewGrid.appendChild(viewMoreCard);
+            }
+
+            // Agregar botón "Ver menos" si está expandido
+            if (totalImages > PREVIEW_LIMIT && isExpanded) {
+                const viewLessCard = document.createElement('div');
+                viewLessCard.className = 'view-more-card preview-item';
+                viewLessCard.onclick = toggleExpandPreview;
+                
+                viewLessCard.innerHTML = `
+                    <div class="view-more-text">Ver Menos</div>
+                    <button class="view-more-button">Ocultar</button>
+                `;
+                
+                previewGrid.appendChild(viewLessCard);
+            }
+            
+            // Actualizar contadores
+            updateImageCounters();
+        }
+
+        function toggleExpandPreview() {
+            isExpanded = !isExpanded;
+            renderPreviewGrid();
+        }
+
+        function removeFile(fileId) {
+            // Eliminar del array
+            const index = selectedFiles.findIndex(f => f.fileId === fileId);
+            if (index > -1) {
+                const file = selectedFiles[index];
+                delete imageLabels[file.name];
+                selectedFiles.splice(index, 1);
+            }
+            
+            // Actualizar UI
+            if (selectedFiles.length === 0) {
+                document.getElementById('previewSection').style.display = 'none';
+                document.getElementById('processButton').disabled = true;
+                document.getElementById('clearAllButton').style.display = 'none';
+                showMessage('No hay imágenes seleccionadas', 'error');
+            } else {
+                renderPreviewGrid(); // Re-renderizar grid
+                document.getElementById('clearAllButton').style.display = 'inline-block';
+                updateImageCounters(); // Actualizar contadores
+                showMessage(`Imagen eliminada. Total: ${selectedFiles.length}`, 'success');
+            }
+        }
+
+        // ==================== ETIQUETADO EN LOTE ====================
+        let currentBatchLabel = '';
+        let unlabeledFiles = [];
+
+        // Modal de pregunta inicial
+        function openLabelQuestionModal(unlabeledCount) {
+            const modal = document.getElementById('labelQuestionModal');
+            document.getElementById('unlabeledImageCount').textContent = unlabeledCount;
+            modal.classList.add('active');
+        }
+
+        function closeLabelQuestionModal() {
+            const modal = document.getElementById('labelQuestionModal');
+            modal.classList.remove('active');
+        }
+
+        function skipBatchLabel() {
+            closeLabelQuestionModal();
+            lastBatchFiles = [];
+        }
+
+        function openBatchLabelFromQuestion() {
+            closeLabelQuestionModal();
+            openBatchLabelModal();
+        }
+
+        function goBackToBatchQuestion() {
+            closeBatchLabelModal();
+            const unlabeledCount = selectedFiles.filter(f => !imageLabels[f.name]).length;
+            if (unlabeledCount > 0) {
+                openLabelQuestionModal(unlabeledCount);
+            }
+        }
+
+        function openBatchLabelModal() {
+            const modal = document.getElementById('batchLabelModal');
+            // Contar solo imágenes SIN etiqueta
+            const unlabeledCount = lastBatchFiles.filter(f => !imageLabels[f.name]).length;
+            if (unlabeledCount === 0) {
+                showMessage('No hay imágenes nuevas sin etiqueta para este lote', 'error');
+                return;
+            }
+            document.getElementById('batchImageCount').textContent = unlabeledCount;
+            document.getElementById('batchLabelInput').value = '';
+            modal.classList.add('active');
+            document.getElementById('batchLabelInput').focus();
+        }
+
+        function closeBatchLabelModal() {
+            const modal = document.getElementById('batchLabelModal');
+            modal.classList.remove('active');
+        }
+
+        // Modal de validación de tamaños de clusters
+        function openClusterSizesModal() {
+            const modal = document.getElementById('clusterSizesModal');
+            modal.classList.add('active');
+        }
+
+        function showClusterSizesModal(message) {
+            const textEl = document.getElementById('clusterSizesModalText');
+            if (textEl && message) {
+                textEl.textContent = message;
+            }
+            openClusterSizesModal();
+        }
+
+        function closeClusterSizesModal() {
+            const modal = document.getElementById('clusterSizesModal');
+            modal.classList.remove('active');
+            const clusterSizesInput = document.getElementById('clusterSizes');
+            if (clusterSizesInput) {
+                clusterSizesInput.focus();
+            }
+        }
+
+        // Reemplazar alert nativo por modal personalizado
+        window.alert = function(message) {
+            showClusterSizesModal(message || 'Ingrese los tamaños de clusters separados por comas.');
+        };
+
+        function applyBatchLabel() {
+            const label = document.getElementById('batchLabelInput').value.trim();
+            
+            if (!label) {
+                showMessage('Por favor ingresa una etiqueta', 'error');
+                return;
+            }
+
+            // Aplicar etiqueta SOLO a imágenes sin etiqueta
+            let applied = 0;
+            lastBatchFiles.forEach(file => {
+                if (!imageLabels[file.name]) {  // Solo si NO tiene etiqueta
+                    imageLabels[file.name] = label;
+                    applied++;
+                }
+            });
+
+            lastBatchFiles = [];
+
+            closeBatchLabelModal();
+            
+            // Re-renderizar vista usando la función centralizada
+            renderPreviewGrid();
+            updateImageCounters(); // Actualizar contadores
+            
+            if (applied > 0) {
+                showMessage(`Etiqueta "${label}" aplicada a ${applied} imagen(es)`, 'success');
+            } else {
+                showMessage('Todas las imágenes ya tienen etiqueta', 'success');
+            }
+        }
+
+        // Cerrar modal con Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLabelQuestionModal();
+                closeBatchLabelModal();
+                closeClusterSizesModal();
+            }
+        });
+
+        // Enter para aplicar en el modal
+        document.getElementById('batchLabelInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                applyBatchLabel();
+            }
+        });
+
+        // ==================== HISTOGRAMA EN TIEMPO REAL ====================
+        let histogramChart = null;
+        let clusterCounts = [];
+
+        function initHistogram(nClusters) {
+            // Inicializar contadores de clusters
+            clusterCounts = new Array(parseInt(nClusters)).fill(0);
+            currentSessionCount = 0; // Resetear contador de sesión
+            clusterRepresentatives = {}; // Resetear representantes
+            
+            // Mostrar sección del histograma
+            document.getElementById('histogramSection').style.display = 'block';
+            
+            // Crear histograma vacío inicial
+            renderEmptyHistogram(parseInt(nClusters));
+        }
+
+        function renderEmptyHistogram(nClusters) {
+            const histogramContainer = document.getElementById('histogramContainer');
+            if (!histogramContainer) return;
+            
+            const modernHistogram = document.createElement('div');
+            modernHistogram.className = 'histogram-modern';
+            
+            for (let i = 0; i < nClusters; i++) {
+                const hue = (i / nClusters) * 360;
+                const barColor = `linear-gradient(to top, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 65%))`;
+                
+                const barWrapper = document.createElement('div');
+                barWrapper.className = 'histogram-bar-wrapper';
+                barWrapper.innerHTML = `
+                    <div class="histogram-bar-container">
+                        <div class="histogram-bar" style="height: 0%; background: ${barColor};">
+                            <div class="histogram-count">0</div>
+                        </div>
+                    </div>
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: #1a252f; border: 3px solid hsl(${hue}, 70%, 50%);"></div>
+                    <div class="histogram-label">Cluster ${i}</div>
+                `;
+                modernHistogram.appendChild(barWrapper);
+            }
+            
+            histogramContainer.innerHTML = '';
+            histogramContainer.appendChild(modernHistogram);
+        }
+
+        function updateHistogram(clusterDistribution) {
+            clusterCounts = clusterDistribution;
+            
+            const histogramContainer = document.getElementById('histogramContainer');
+            if (!histogramContainer) return;
+            
+            // Obtener o crear el histograma moderno
+            let modernHistogram = histogramContainer.querySelector('.histogram-modern');
+            if (!modernHistogram) {
+                renderEmptyHistogram(clusterCounts.length);
+                modernHistogram = histogramContainer.querySelector('.histogram-modern');
+            }
+            
+            // Actualizar las barras existentes
+            const barWrappers = modernHistogram.querySelectorAll('.histogram-bar-wrapper');
+            const maxCount = Math.max(...clusterCounts, 1);
+            
+            barWrappers.forEach((wrapper, index) => {
+                const count = clusterCounts[index] || 0;
+                const heightPercent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                
+                const bar = wrapper.querySelector('.histogram-bar');
+                const countElement = wrapper.querySelector('.histogram-count');
+                
+                if (bar && countElement) {
+                    bar.style.height = `${heightPercent}%`;
+                    countElement.textContent = count;
+                }
+            });
+            
+            // Actualizar estadísticas
+            updateHistogramStats();
+        }
+
+        function updateHistogramStats() {
+            const statsDiv = document.getElementById('histogramStats');
+            // Usar currentSessionCount en lugar de la suma de clusters
+            const maxCluster = Math.max(...clusterCounts);
+            const minCluster = Math.min(...clusterCounts);
+            const avgCluster = currentSessionCount > 0 ? currentSessionCount / clusterCounts.length : 0;
+            
+            statsDiv.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">Total Imágenes</div>
+                    <div class="stat-value">${currentSessionCount}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Cluster Máximo</div>
+                    <div class="stat-value">${maxCluster}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Cluster Mínimo</div>
+                    <div class="stat-value">${minCluster}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Promedio</div>
+                    <div class="stat-value">${avgCluster.toFixed(1)}</div>
+                </div>
+            `;
+        }
+
+        // ==================== ONLINE LIVE ====================
+        async function startLive() {
+            const liveStatus = document.getElementById('liveStatus');
+            const liveStartButton = document.getElementById('liveStartButton');
+            const liveStopButton = document.getElementById('liveStopButton');
+
+            try {
+                const nClusters = document.getElementById('nClusters').value;
+                const totalImagesRaw = document.getElementById('liveTotalImages').value.trim();
+                const clusterSizes = document.getElementById('liveClusterSizes').value.trim();
+                // CAMBIO: Leer threshold
+                const threshold = document.getElementById('distanceThreshold').value;
+
+                const totalImages = totalImagesRaw ? Number(totalImagesRaw) : NaN;
+
+                if (!clusterSizes && (!Number.isFinite(totalImages) || totalImages <= 0)) {
+                    showMessage('Ingresa la cantidad total de imágenes para LIVE', 'warning');
+                    return;
+                }
+
+                if (clusterSizes) {
+                    const sizes = clusterSizes.split(',').map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v));
+                    if (sizes.length !== parseInt(nClusters, 10)) {
+                        showMessage('El número de tamaños no coincide con el número de clusters', 'warning');
+                        return;
+                    }
+                    if (sizes.some(v => v <= 0)) {
+                        showMessage('Los tamaños de clusters deben ser mayores a 0', 'warning');
+                        return;
+                    }
+                }
+
+                const response = await fetch('/api/online/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        metodo: selectedMetodo,
+                        n_clusters: nClusters,
+                        total_images: clusterSizes ? null : Math.trunc(totalImages),
+                        cluster_sizes: clusterSizes || null,
+                        threshold: threshold // CAMBIO: Enviar threshold
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al iniciar LIVE');
+                }
+
+                liveRunning = true;
+                liveStartButton.disabled = true;
+                liveStopButton.disabled = false;
+                document.getElementById('liveSendButton').disabled = !liveSelectedFile;
+                liveStatus.textContent = `LIVE iniciado (Umbral: ${threshold}). Esperando imágenes...`;
+
+                liveResults = [];
+                initHistogram(nClusters);
+                startLiveStream();
+                showMessage(`Online LIVE iniciado (Umbral: ${threshold})`, 'success');
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function stopLive() {
+            const liveStatus = document.getElementById('liveStatus');
+            const liveStartButton = document.getElementById('liveStartButton');
+            const liveStopButton = document.getElementById('liveStopButton');
+
+            try {
+                const response = await fetch('/api/online/stop', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al detener LIVE');
+                }
+
+                liveRunning = false;
+                liveStartButton.disabled = false;
+                liveStopButton.disabled = true;
+                document.getElementById('liveSendButton').disabled = true;
+                liveStatus.textContent = 'LIVE detenido.';
+
+                if (liveEventSource) {
+                    liveEventSource.close();
+                    liveEventSource = null;
+                }
+
+                if (data.metricas) {
+                    displayMetricas(data.metricas, liveResults.length);
+                }
+
+                showMessage('Online LIVE detenido', 'success');
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function sendLiveImage() {
+            if (!liveRunning) {
+                await startLive();
+                if (!liveRunning) {
+                    return;
+                }
+            }
+
+            if (!liveSelectedFile) {
+                showMessage('Selecciona una imagen', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', liveSelectedFile);
+            const label = document.getElementById('liveLabelInput').value.trim();
+            if (label) {
+                formData.append('label', label);
+            }
+
+            try {
+                const response = await fetch('/api/online/push', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al enviar imagen');
+                }
+
+                showMessage(`Enviado: ${data.filename}`, 'success');
+                liveSelectedFile = null;
+                document.getElementById('liveSendButton').disabled = true;
+                document.getElementById('liveLabelInput').value = '';
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        function startLiveStream() {
+            if (liveEventSource) {
+                liveEventSource.close();
+            }
+
+            liveEventSource = new EventSource('/api/online/stream');
+            const liveStatus = document.getElementById('liveStatus');
+
+            liveEventSource.onmessage = (event) => {
+                const eventData = JSON.parse(event.data);
+
+                if (eventData.type === 'ping' || eventData.type === 'connected') {
+                    return;
+                }
+
+                if (eventData.type === 'error') {
+                    showMessage(eventData.error || 'Error en LIVE', 'error');
+                    return;
+                }
+
+                if (eventData.type === 'result') {
+                    liveResults.push(eventData.data);
+                    currentSessionCount = eventData.total_acumulado || liveResults.length;
+
+                    if (eventData.distribucion) {
+                        updateHistogram(eventData.distribucion);
+                    }
+
+                    if (eventData.metricas) {
+                        displayMetricas(eventData.metricas, eventData.total_acumulado || liveResults.length);
+                    }
+
+                    displayResults(liveResults);
+                    liveStatus.textContent = `Procesada: ${eventData.data.nombre} (Total: ${currentSessionCount})`;
+                }
+            };
+
+            liveEventSource.onerror = () => {
+                liveStatus.textContent = 'Conexión LIVE perdida. Reintentando...';
+            };
+        }
+
+        // Botones Online LIVE
+        document.getElementById('liveStartButton').addEventListener('click', startLive);
+        document.getElementById('liveStopButton').addEventListener('click', stopLive);
+        document.getElementById('liveSendButton').addEventListener('click', sendLiveImage);
+
+        // Procesar imagenes CON TIEMPO REAL
+        document.getElementById('processButton').addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+
+            const nClusters = document.getElementById('nClusters').value;
+            const messageArea = document.getElementById('messageArea');
+            
+            // VALIDAR TAMAÑOS DE CLUSTERS PRIMERO (OBLIGATORIO)
+            const clusterSizesInput = document.getElementById('clusterSizes');
+            const clusterSizes = clusterSizesInput.value.trim();
+            // CAMBIO: Leer threshold
+            const threshold = document.getElementById('distanceThreshold').value;
+            
+            if (!clusterSizes || clusterSizes === '') {
+                clusterSizesInput.focus();
+                clusterSizesInput.style.borderColor = '#e74c3c';
+                showClusterSizesModal('Ingrese los tamaños de clusters separados por comas.');
+                return;
+            }
+            
+            // Restaurar borde normal
+            clusterSizesInput.style.borderColor = '#4a5f7f';
+            
+            // Inicializar histograma
+            initHistogram(nClusters);
+            
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('files', file));
+            formData.append('metodo', selectedMetodo);
+            formData.append('n_clusters', nClusters);
+            formData.append('labels', JSON.stringify(imageLabels));
+            formData.append('realtime', 'true'); // Activar modo tiempo real
+            
+            // Agregar tamaños de clusters
+            formData.append('cluster_sizes', clusterSizes);
+            // CAMBIO: Agregar threshold
+            formData.append('threshold', threshold);
+
+            messageArea.innerHTML = '<div class="loading"><div class="spinner"></div>Procesando imágenes en tiempo real...</div>';
+            document.getElementById('processButton').disabled = true;
+
+            try {
+                // Usar Server-Sent Events para actualizaciones en tiempo real
+                const response = await fetch('/api/classify_stream', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Error desconocido');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let allResults = [];
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop(); // Guardar línea incompleta
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const eventData = JSON.parse(line.substring(6));
+                            
+                            if (eventData.type === 'connected') {
+                                // Conexión establecida
+                            } else if (eventData.type === 'start') {
+                                // Evento de inicio - mostrar total de imágenes
+                                document.getElementById('processingStatus').textContent = 
+                                    `Iniciando procesamiento de ${eventData.total} imágenes...`;
+                            } else if (eventData.type === 'progress') {
+                                // Actualizar estado
+                                document.getElementById('processingStatus').textContent = 
+                                    `Procesando: ${eventData.current}/${eventData.total} - ${eventData.filename}`;
+                                
+                                // Incrementar contador de sesión
+                                currentSessionCount = eventData.current;
+                                
+                                // Actualizar histograma
+                                if (eventData.cluster_distribution) {
+                                    updateHistogram(eventData.cluster_distribution);
+                                }
+                            } else if (eventData.type === 'result') {
+                                allResults.push(eventData.data);
+                            } else if (eventData.type === 'image_error') {
+                                // Error en imagen específica (continúa)
+                                showMessage(`Error en ${eventData.filename}: ${eventData.error}`, 'warning');
+                            } else if (eventData.type === 'complete') {
+                                messageArea.innerHTML = '';
+                                document.getElementById('processingStatus').textContent = 
+                                    `✓ Procesamiento completado: ${eventData.total} imágenes`;
+                                displayResults(allResults);
+                                displayMetricas(eventData.metricas, eventData.total_acumulado);
+                            } else if (eventData.type === 'error') {
+                                throw new Error(eventData.error);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                messageArea.innerHTML = '';
+                showMessage('Error al procesar: ' + error.message, 'error');
+            } finally {
+                document.getElementById('processButton').disabled = false;
+            }
+        });
+
+        function displayResults(resultados) {
+            const resultsSection = document.getElementById('resultsSection');
+            const clustersContainer = document.getElementById('clustersContainer');
+            
+            // Agrupar resultados por cluster
+            const clusters = {};
+            const clusterLabels = {}; // Para contar las etiquetas por cluster
+            clusterRepresentatives = {}; // Resetear representantes
+            const clusterPredominantImages = {}; // Guardar imágenes por etiqueta predominante
+            
+            resultados.forEach(resultado => {
+                const clusterId = resultado.cluster;
+                if (!clusters[clusterId]) {
+                    clusters[clusterId] = [];
+                    clusterLabels[clusterId] = {}; // Objeto para contar ocurrencias
+                    clusterPredominantImages[clusterId] = {}; // Objeto para guardar imágenes por etiqueta
+                }
+                clusters[clusterId].push(resultado);
+                if (resultado.label_real) {
+                    // Contar cuántas veces aparece cada etiqueta
+                    if (!clusterLabels[clusterId][resultado.label_real]) {
+                        clusterLabels[clusterId][resultado.label_real] = 0;
+                    }
+                    clusterLabels[clusterId][resultado.label_real]++;
+                    
+                    // Guardar la primera imagen de cada etiqueta
+                    if (!clusterPredominantImages[clusterId][resultado.label_real]) {
+                        clusterPredominantImages[clusterId][resultado.label_real] = resultado.imagen;
+                    }
+                }
+                
+                // Guardar la primera imagen como fallback
+                if (!clusterRepresentatives[clusterId]) {
+                    clusterRepresentatives[clusterId] = resultado.imagen;
+                }
+            });
+            
+            // Asignar imagen de la etiqueta predominante a cada cluster
+            Object.keys(clusterLabels).forEach(clusterId => {
+                const labelCounts = clusterLabels[clusterId];
+                if (labelCounts && Object.keys(labelCounts).length > 0) {
+                    // Encontrar la etiqueta con mayor conteo
+                    let maxCount = 0;
+                    let predominantLabel = '';
+                    for (const [label, count] of Object.entries(labelCounts)) {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            predominantLabel = label;
+                        }
+                    }
+                    // Usar la imagen de la etiqueta predominante
+                    if (clusterPredominantImages[clusterId][predominantLabel]) {
+                        clusterRepresentatives[clusterId] = clusterPredominantImages[clusterId][predominantLabel];
+                    }
+                }
+            });
+            
+            // Actualizar histograma con miniaturas
+            updateHistogramWithThumbnails();
+            
+            clustersContainer.innerHTML = '';
+            
+            // Crear card para cada cluster
+            Object.keys(clusters).sort((a, b) => parseInt(a) - parseInt(b)).forEach(clusterId => {
+                const clusterImages = clusters[clusterId];
+                const previewLimit = 4;
+                const hasMore = clusterImages.length > previewLimit;
+                
+                // Determinar etiqueta predominante (la que más se repite)
+                let clusterName = '';
+                const labelCounts = clusterLabels[clusterId];
+                if (labelCounts && Object.keys(labelCounts).length > 0) {
+                    // Encontrar la etiqueta con mayor conteo
+                    let maxCount = 0;
+                    let predominantLabel = '';
+                    for (const [label, count] of Object.entries(labelCounts)) {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            predominantLabel = label;
+                        }
+                    }
+                    clusterName = `(${predominantLabel})`;
+                }
+                
+                const clusterCard = document.createElement('div');
+                clusterCard.className = 'cluster-card';
+                clusterCard.dataset.clusterId = clusterId;
+                
+                // Header del cluster
+                const header = document.createElement('div');
+                header.className = 'cluster-header';
+                header.onclick = () => toggleCluster(clusterId);
+                
+                header.innerHTML = `
+                    <div class="cluster-title">
+                        <div class="cluster-badge">Cluster ${clusterId}</div>
+                        <div class="cluster-name">${clusterName}</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="cluster-count">${clusterImages.length} imagen${clusterImages.length !== 1 ? 'es' : ''}</div>
+                        <button class="cluster-toggle" id="toggle-${clusterId}">▼</button>
+                    </div>
+                `;
+                
+                clusterCard.appendChild(header);
+                
+                // Preview (primeras 3-4 imágenes)
+                const preview = document.createElement('div');
+                preview.className = 'cluster-preview';
+                
+                const previewGrid = document.createElement('div');
+                previewGrid.className = 'cluster-preview-grid';
+                
+                clusterImages.slice(0, previewLimit).forEach(img => {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'cluster-preview-item';
+                    
+                    let gtBadge = '';
+                    if (img.label_real) {
+                        gtBadge = `<div class="cluster-preview-gt">GT: ${img.label_real}</div>`;
+                    }
+                    
+                    previewItem.innerHTML = `
+                        <img src="data:image/jpeg;base64,${img.imagen}" class="cluster-preview-img" alt="${img.nombre}">
+                        <div class="cluster-preview-overlay">
+                            <div class="cluster-preview-filename" title="${img.nombre}">${img.nombre}</div>
+                            ${gtBadge}
+                            <div class="cluster-preview-stats">
+                                <div class="cluster-preview-stat">
+                                    <span>Distancia:</span>
+                                    <span class="cluster-preview-stat-value">${img.distancia}</span>
+                                </div>
+                                <div class="cluster-preview-stat">
+                                    <span>Confianza:</span>
+                                    <span class="cluster-preview-stat-value">${img.confianza}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    previewGrid.appendChild(previewItem);
+                });
+                
+                // Botón "Ver más" si hay más imágenes
+                if (hasMore) {
+                    const viewMore = document.createElement('div');
+                    viewMore.className = 'cluster-view-more';
+                    viewMore.onclick = (e) => {
+                        e.stopPropagation();
+                        toggleCluster(clusterId);
+                    };
+                    viewMore.innerHTML = `
+                        <div class="cluster-view-more-content">
+                            <span class="cluster-view-more-number">+${clusterImages.length - previewLimit}</span>
+                            <span class="cluster-view-more-text">Ver más</span>
+                        </div>
+                    `;
+                    previewGrid.appendChild(viewMore);
+                }
+                
+                preview.appendChild(previewGrid);
+                clusterCard.appendChild(preview);
+                
+                // Contenido expandible (todas las imágenes)
+                const content = document.createElement('div');
+                content.className = 'cluster-content';
+                content.id = `content-${clusterId}`;
+                
+                const fullGrid = document.createElement('div');
+                fullGrid.className = 'cluster-full-grid';
+                
+                clusterImages.forEach(img => {
+                    const fullItem = document.createElement('div');
+                    fullItem.className = 'cluster-full-item';
+                    
+                    let labelBadge = '';
+                    if (img.label_real) {
+                        labelBadge = `<div class="cluster-label-badge">GT: ${img.label_real}</div>`;
+                    }
+                    
+                    fullItem.innerHTML = `
+                        <img src="data:image/jpeg;base64,${img.imagen}" class="cluster-full-img" alt="${img.nombre}">
+                        <div class="cluster-full-info">
+                            <div class="cluster-full-filename" title="${img.nombre}">${img.nombre}</div>
+                            ${labelBadge}
+                            <div class="cluster-full-stats">
+                                <div class="cluster-stat-row">
+                                    <span>Distancia:</span>
+                                    <span class="cluster-stat-value">${img.distancia}</span>
+                                </div>
+                                <div class="cluster-stat-row">
+                                    <span>Confianza:</span>
+                                    <span class="cluster-stat-value">${img.confianza}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    fullGrid.appendChild(fullItem);
+                });
+                
+                content.appendChild(fullGrid);
+                clusterCard.appendChild(content);
+                
+                clustersContainer.appendChild(clusterCard);
+            });
+            
+            resultsSection.style.display = 'block';
+        }
+
+        function toggleCluster(clusterId) {
+            const content = document.getElementById(`content-${clusterId}`);
+            const toggle = document.getElementById(`toggle-${clusterId}`);
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                toggle.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                toggle.classList.add('expanded');
+            }
+        }
+
+        function updateHistogramWithThumbnails() {
+            if (Object.keys(clusterRepresentatives).length === 0) return;
+            
+            const histogramContainer = document.getElementById('histogramContainer');
+            if (!histogramContainer) return;
+            
+            // Crear histograma moderno con miniaturas
+            const modernHistogram = document.createElement('div');
+            modernHistogram.className = 'histogram-modern';
+            
+            const sortedClusters = Object.keys(clusterRepresentatives).sort((a, b) => parseInt(a) - parseInt(b));
+            const maxCount = Math.max(...clusterCounts);
+            
+            sortedClusters.forEach(clusterId => {
+                const count = clusterCounts[parseInt(clusterId)] || 0;
+                const heightPercent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                
+                const barWrapper = document.createElement('div');
+                barWrapper.className = 'histogram-bar-wrapper';
+                
+                // Generar color dinámico basado en índice
+                const index = parseInt(clusterId);
+                const hue = (index / sortedClusters.length) * 360;
+                const barColor = `linear-gradient(to top, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 65%))`;
+                
+                barWrapper.innerHTML = `
+                    <div class="histogram-bar-container">
+                        <div class="histogram-bar" style="height: ${heightPercent}%; background: ${barColor};">
+                            <div class="histogram-count">${count}</div>
+                        </div>
+                    </div>
+                    <img src="data:image/jpeg;base64,${clusterRepresentatives[clusterId]}" 
+                         class="histogram-thumbnail" 
+                         alt="Cluster ${clusterId}"
+                         style="border-color: hsl(${hue}, 70%, 50%);">
+                    <div class="histogram-label">Cluster ${clusterId}</div>
+                `;
+                
+                modernHistogram.appendChild(barWrapper);
+            });
+            
+            // Reemplazar canvas con nuevo histograma
+            histogramContainer.innerHTML = '';
+            histogramContainer.appendChild(modernHistogram);
+        }
+
+        function displayMetricas(metricas, totalAcumulado) {
+            const metricasSection = document.getElementById('metricasSection');
+            const metricasGrid = document.getElementById('metricasGrid');
+            const metricasInfo = document.getElementById('metricasInfo');
+            
+            metricasGrid.innerHTML = '';
+            
+            // Métricas internas (siempre disponibles)
+            if (metricas.internas) {
+                addMetricaCard('Silhouette', metricas.internas.silhouette?.toFixed(4) || '0.0000', metricasGrid);
+                addMetricaCard('Dunn Index', metricas.internas.dunn?.toFixed(4) || '0.0000', metricasGrid);
+            }
+            
+            // Métricas externas (si hay etiquetas)
+            if (metricas.externas && Object.keys(metricas.externas).length > 0) {
+                addMetricaCard('ARI', metricas.externas.ari?.toFixed(4) || '0.0000', metricasGrid);
+                addMetricaCard('NMI', metricas.externas.nmi?.toFixed(4) || '0.0000', metricasGrid);
+                addMetricaCard('AMI', metricas.externas.ami?.toFixed(4) || '0.0000', metricasGrid);
+                
+                metricasInfo.innerHTML = `Total acumulado: ${totalAcumulado} imágenes | 
+                    Etiquetadas: ${metricas.externas.n_etiquetadas || 0}`;
+            } else {
+                metricasInfo.innerHTML = `Total acumulado: ${totalAcumulado} imágenes | 
+                    Sin etiquetas (solo métricas internas disponibles)`;
+            }
+            
+            metricasSection.style.display = 'block';
+        }
+
+        function addMetricaCard(titulo, valor, container) {
+            const card = document.createElement('div');
+            card.className = 'metrica-card';
+            card.innerHTML = `
+                <div class="metrica-titulo">${titulo}</div>
+                <div class="metrica-valor">${valor}</div>
+            `;
+            container.appendChild(card);
+        }
+
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Botón de eliminar todas las imágenes
+        document.getElementById('clearAllButton').addEventListener('click', () => {
+            if (!confirm('¿Estás seguro de eliminar todas las imágenes seleccionadas?')) {
+                return;
+            }
+            
+            // Limpiar arrays y UI
+            selectedFiles = [];
+            imageLabels = {};
+            fileCounter = 0;
+            isExpanded = false; // Resetear estado de expansión
+            
+            const previewGrid = document.getElementById('previewGrid');
+            previewGrid.innerHTML = '';
+            
+            const previewSection = document.getElementById('previewSection');
+            previewSection.style.display = 'none';
+            
+            const clearAllButton = document.getElementById('clearAllButton');
+            clearAllButton.style.display = 'none';
+            
+            // Ocultar histograma
+            document.getElementById('histogramSection').style.display = 'none';
+            
+            processButton.disabled = true;
+            
+            showMessage('Todas las imágenes han sido eliminadas', 'success');
+        });
+
+        // Botón de reinicio - Recarga la página completamente
+        document.getElementById('resetButton').addEventListener('click', async () => {
+            if (!confirm('¿Estás seguro de reiniciar el sistema? Se perderán todos los datos acumulados.')) {
+                return;
+            }
+
+            try {
+                if (liveRunning) {
+                    await stopLive();
+                }
+                // Llamar al API para reiniciar el backend
+                const response = await fetch('/api/reset', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        metodo: selectedMetodo,
+                        n_clusters: document.getElementById('nClusters').value
+                    })
+                });
+
+                // Recargar la página completamente (como F5)
+                location.reload();
+                
+            } catch (error) {
+                // Si hay error, igual recargar la página
+                location.reload();
+            }
+        });
+
+        // Inicializar
+        loadInfo();
+        setMode('batch');
+    </script>
+</body>
+</html>
